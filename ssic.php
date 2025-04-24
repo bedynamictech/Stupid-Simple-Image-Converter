@@ -2,7 +2,7 @@
 /*
 Plugin Name: Stupid Simple Image Converter
 Description: Automatically convert uploaded PNG and JPG images to WebP format.
-Version: 1.1
+Version: 1.1.1
 Author: Dynamic Technologies
 Author URI: https://bedynamic.tech
 Plugin URI: https://github.com/bedynamictech/Stupid-Simple-Image-Converter
@@ -98,6 +98,25 @@ add_action( 'admin_notices', function() {
 add_filter( 'wp_generate_attachment_metadata', 'ssic_convert_to_webp', 10, 2 );
 add_action( 'add_attachment', 'ssic_convert_to_webp', 10, 1 );
 function ssic_convert_to_webp( $metadata_or_id, $attachment_id = null ) {
+    $attachment_id = is_array( $metadata_or_id ) ? $attachment_id : $metadata_or_id;
+    $file          = get_attached_file( $attachment_id );
+    $ext           = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
+
+    // Skip if already WebP, not image, or already converted
+    if ( 'webp' === $ext || ! wp_attachment_is_image( $attachment_id ) || get_post_meta( $attachment_id, 'ssic_converted', true ) ) {
+        return $metadata_or_id;
+    }
+
+    $quality     = (int) get_option( 'ssic_quality', 85 );
+    $destination = preg_replace( '/\.[^.]+$/', '.webp', $file );
+
+    // Skip if .webp already exists (e.g. from a previous converter)
+    if ( file_exists( $destination ) ) {
+        update_post_meta( $attachment_id, 'ssic_converted', time() );
+        return $metadata_or_id;
+    }
+
+    $converted   = false;
     $attachment_id = is_array( $metadata_or_id ) ? $attachment_id : $metadata_or_id;
     $file = get_attached_file( $attachment_id );
     $ext  = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
