@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Stupid Simple Image Converter
  * Description: Automatically convert uploaded images to WebP format and serve the WebP version.
- * Version: 1.0
+ * Version: 1.0.1
  * Author: Dynamic Technologies
  * Author URI: https://bedynamic.tech
  * Plugin URI: https://github.com/bedynamictech/Stupid-Simple-Image-Converter
@@ -13,6 +13,14 @@
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
+}
+
+// Add Settings link
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'ssic_action_links' );
+function ssic_action_links( $links ) {
+    $settings_link = '<a href="' . admin_url( 'admin.php?page=ssic-settings' ) . '">Settings</a>';
+    array_unshift( $links, $settings_link );
+    return $links;
 }
 
 // Register settings for image quality
@@ -177,12 +185,4 @@ function ssic_srcset_webp( $sources, $size_array, $image_src, $image_meta, $atta
         }
     }
     return $sources;
-}
-
-// Add Settings link
-add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'ssic_action_links' );
-function ssic_action_links( $links ) {
-    $settings_link = '<a href="' . admin_url( 'admin.php?page=ssic-settings' ) . '">Settings</a>';
-    array_unshift( $links, $settings_link );
-    return $links;
 }
