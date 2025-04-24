@@ -1,14 +1,14 @@
 <?php
-/*
-Plugin Name: Stupid Simple Image Converter
-Description: Automatically convert uploaded PNG and JPG images to WebP format.
-Version: 1.0
-Author: Dynamic Technologies
-Author URI: https://bedynamic.tech
-Plugin URI: https://github.com/bedynamictech/Stupid-Simple-Image-Converter
-License: GPLv2 or later
-License URI: http://www.gnu.org/licenses/gpl-2.0.html
-*/
+/**
+ * Plugin Name: Stupid Simple Image Converter
+ * Description: Automatically convert uploaded images to WebP format and serve the WebP version.
+ * Version: 1.0
+ * Author: Dynamic Technologies
+ * Author URI: https://bedynamic.tech
+ * Plugin URI: https://github.com/bedynamictech/Stupid-Simple-Image-Converter
+ * License: GPLv2 or later
+ * License URI: http://www.gnu.org/licenses/gpl-2.0.html
+ */
 
 // Prevent direct access
 if ( ! defined( 'ABSPATH' ) ) {
@@ -177,4 +177,12 @@ function ssic_srcset_webp( $sources, $size_array, $image_src, $image_meta, $atta
         }
     }
     return $sources;
+}
+
+// Add Settings link
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), 'ssic_action_links' );
+function ssic_action_links( $links ) {
+    $settings_link = '<a href="' . admin_url( 'admin.php?page=ssic-settings' ) . '">Settings</a>';
+    array_unshift( $links, $settings_link );
+    return $links;
 }
