@@ -2,7 +2,7 @@
 /*
 Plugin Name: Stupid Simple Image Converter
 Description: Automatically convert uploaded PNG and JPG images to WebP format.
-Version: 1.1.1
+Version: 1.2
 Author: Dynamic Technologies
 Author URI: https://bedynamic.tech
 Plugin URI: https://github.com/bedynamictech/Stupid-Simple-Image-Converter
@@ -36,17 +36,29 @@ function ssic_register_settings() {
 
 // Add main menu and submenu
 add_action( 'admin_menu', 'ssic_add_menu' );
+
 function ssic_add_menu() {
-    add_menu_page(
-        'Stupid Simple',
-        'Stupid Simple',
-        'manage_options',
-        'stupidsimple',
-        'ssic_settings_page_content',
-        'dashicons-hammer',
-        99
-    );
-    // Add Image Converter submenu
+    global $menu;
+    $parent_exists = false;
+    foreach ($menu as $item) {
+        if (!empty($item[2]) && $item[2] === 'stupidsimple') {
+            $parent_exists = true;
+            break;
+        }
+    }
+
+    if (!$parent_exists) {
+        add_menu_page(
+            'Stupid Simple',
+            'Stupid Simple',
+            'manage_options',
+            'stupidsimple',
+            'ssic_settings_page_content',
+            'dashicons-hammer',
+            99
+        );
+    }
+
     add_submenu_page(
         'stupidsimple',
         'Image Converter',
@@ -102,30 +114,20 @@ function ssic_convert_to_webp( $metadata_or_id, $attachment_id = null ) {
     $file          = get_attached_file( $attachment_id );
     $ext           = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
 
-    // Skip if already WebP, not image, or already converted
     if ( 'webp' === $ext || ! wp_attachment_is_image( $attachment_id ) || get_post_meta( $attachment_id, 'ssic_converted', true ) ) {
         return $metadata_or_id;
     }
 
     $quality     = (int) get_option( 'ssic_quality', 85 );
-    $destination = preg_replace( '/\.[^.]+$/', '.webp', $file );
+    $dest        = preg_replace( '/\.[^.]+$/', '.webp', $file );
 
-    // Skip if .webp already exists (e.g. from a previous converter)
-    if ( file_exists( $destination ) ) {
+    if ( file_exists( $dest ) ) {
         update_post_meta( $attachment_id, 'ssic_converted', time() );
         return $metadata_or_id;
     }
 
-    $converted   = false;
-    $attachment_id = is_array( $metadata_or_id ) ? $attachment_id : $metadata_or_id;
-    $file = get_attached_file( $attachment_id );
-    $ext  = strtolower( pathinfo( $file, PATHINFO_EXTENSION ) );
-    if ( 'webp' === $ext || ! wp_attachment_is_image( $attachment_id ) || get_post_meta( $attachment_id, 'ssic_converted', true ) ) {
-        return $metadata_or_id;
-    }
-    $quality     = (int) get_option( 'ssic_quality', 85 );
-    $dest        = preg_replace( '/\.[^.]+$/', '.webp', $file );
-    $ok          = false;
+    $ok = false;
+
     if ( class_exists( 'Imagick' ) ) {
         try {
             $i = new Imagick( $file );
@@ -135,12 +137,18 @@ function ssic_convert_to_webp( $metadata_or_id, $attachment_id = null ) {
             $i->clear(); $i->destroy();
         } catch ( Exception $e ) {}
     }
+
     if ( ! $ok && function_exists( 'imagewebp' ) ) {
         switch ( $ext ) {
-            case 'jpg': case 'jpeg': $img = imagecreatefromjpeg( $file ); break;
-            case 'png':                $img = imagecreatefrompng(  $file ); break;
-            case 'gif':                $img = imagecreatefromgif(  $file ); break;
-            default:                   $img = false;
+            case 'jpg':
+            case 'jpeg':
+                $img = imagecreatefromjpeg( $file ); break;
+            case 'png':
+                $img = imagecreatefrompng( $file ); break;
+            case 'gif':
+                $img = imagecreatefromgif( $file ); break;
+            default:
+                $img = false;
         }
         if ( $img ) {
             if ( function_exists( 'imagepalettetotruecolor' ) ) {
@@ -150,16 +158,18 @@ function ssic_convert_to_webp( $metadata_or_id, $attachment_id = null ) {
             imagedestroy( $img );
         }
     }
+
     if ( $ok ) {
         update_post_meta( $attachment_id, 'ssic_converted', time() );
     }
+
     return $metadata_or_id;
 }
 
 // Serve WebP URLs
 add_filter( 'wp_get_attachment_url',   'ssic_serve_webp',       10, 2 );
 add_filter( 'wp_get_attachment_image_src', 'ssic_src_webp',     10, 4 );
-add_filter( 'wp_calculate_image_srcset',    'ssic_srcset_webp',  10, 5 );
+add_filter( 'wp_calculate_image_srcset',    'ssic_srcset_webp', 10, 5 );
 function ssic_serve_webp( $url, $id ) {
     $file = get_attached_file( $id );
     $webp = preg_replace( '/\.[^.]+$/', '.webp', $file );
